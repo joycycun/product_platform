@@ -6,3 +6,7 @@ data/
 __pycache__/
 .pytest_cache/
 *.log
+.tools/
+__pycache__/
+.pytest_cache/
+*.tsbuildinfo

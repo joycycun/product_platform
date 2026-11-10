@@ -31,6 +31,11 @@ def init():
         CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,project_id TEXT,kind TEXT,status TEXT,input TEXT,result TEXT,error TEXT,created_at TEXT,finished_at TEXT);
         CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY,project_id TEXT,record_id TEXT,name TEXT,path TEXT,mime TEXT,created_at TEXT);
         ''')
+        c.executescript('''
+        CREATE TABLE IF NOT EXISTS account_settings(user_id TEXT PRIMARY KEY,role TEXT NOT NULL DEFAULT 'member',active INTEGER NOT NULL DEFAULT 1);
+        CREATE TABLE IF NOT EXISTS admin_audit(id TEXT PRIMARY KEY,actor TEXT,action TEXT,target_id TEXT,created_at TEXT);
+        INSERT OR IGNORE INTO migrations VALUES(2);
+        ''')
         c.execute("UPDATE jobs SET status='failed',error='服务重启，任务中断；请重新提交',finished_at=? WHERE status IN ('queued','running')",(now(),))
 
 def add(project,kind,data,author='system',c=None):

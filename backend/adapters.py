@@ -60,7 +60,7 @@ def model_json(task,context,schema):
 
 def needs(feedbacks,baseline,mode):
     if mode=='live':return model_json('根据原话提取需求并拆解软件、硬件、接口和联合验收。status 必须 pending；feedback_ids 引用输入 id。',{'feedbacks':feedbacks,'baseline':baseline},NeedResult)['needs']
-    return [dict(title='待确认：'+f['data']['quote'][:36],description='演示规则草稿：'+f['data']['quote'],feedback_ids=[f['id']],status='pending',allocation=dict(software='定义事件优先级、状态转换、配置入口与异常恢复；待软件负责人确认',hardware='核对显示、警示灯、驱动供电与结构安装空间；待硬件负责人确认',interface='草拟事件类型、模式、序列号与故障回执；字段及超时待双方确认',acceptance='正常/断网/掉电场景联合测试；量化阈值、测试条件与责任人待评审'))) for f in feedbacks]
+    return [dict(title='待确认：'+f['data']['quote'][:36],description='演示规则草稿：'+f['data']['quote'],feedback_ids=[f['id']],status='pending',allocation=dict(software='定义事件优先级、状态转换、配置入口与异常恢复；待软件负责人确认',hardware='核对显示、警示灯、驱动供电与结构安装空间；待硬件负责人确认',interface='草拟事件类型、模式、序列号与故障回执；字段及超时待双方确认',acceptance='正常/断网/掉电场景联合测试；量化阈值、测试条件与责任人待评审')) for f in feedbacks]
 
 def proposals(confirmed,baseline,constraints,mode):
     if mode=='live':return model_json('生成两种可比较的功能方案；逐项给出 premier 关系、来源、风险。premier 未知时明确待核实，不声称存在某功能。',{'needs':confirmed,'baseline':baseline,'constraints':constraints},Proposals)['proposals']

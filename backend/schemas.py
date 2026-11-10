@@ -4,7 +4,7 @@ class Strict(BaseModel):
     model_config=ConfigDict(extra='forbid',str_strip_whitespace=True)
 class Login(Strict):
     name:str=Field(min_length=2,max_length=80)
-    password:str=Field(min_length=8,max_length=200)
+    password:str=Field(min_length=1,max_length=200)
 class Project(Strict):
     name:str=Field(min_length=2,max_length=120)
     direction:str=Field(min_length=3,max_length=2000)

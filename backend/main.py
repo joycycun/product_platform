@@ -26,7 +26,7 @@ async def lifespan(app):
             c.execute('INSERT OR IGNORE INTO users VALUES(?,?,?)',(db.uid(),os.getenv('BOOTSTRAP_USER','admin'),password_hash(os.environ['BOOTSTRAP_PASSWORD'])))
     yield
 
-app=FastAPI(title='造物 · 产品设计平台',version='0.1.0',lifespan=lifespan)
+app=FastAPI(title='Zycoo · 产品设计平台',version='0.1.0',lifespan=lifespan)
 @app.exception_handler(ValueError)
 async def invalid(request,exc):return JSONResponse(status_code=422,content={'detail':str(exc)})
 
@@ -70,7 +70,7 @@ def register_file(pid,rid,path,mime=None):
     path=Path(path)
     mime=mime or {'svg':'image/svg+xml','json':'application/json','txt':'text/plain','pdf':'application/pdf'}.get(path.suffix[1:],'application/octet-stream')
     fid=db.uid()
-    with db.connect() as c:c.execute('INSERT INTO files VALUES(?,?,?,?,?,?,?)',(fid,pid,rid,path.name,str(path),mime,db.now()))
+    with db.connect() as c:c.execute('INSERT INTO files VALUES(?,?,?,?,?,?,?)',(fid,pid,rid,path.name,str(path.relative_to(db.ROOT)),mime,db.now()))
     return {'id':fid,'name':path.name,'url':'/api/files/'+fid}
 
 def submit(pid,kind,inputs,fn):
@@ -256,6 +256,7 @@ def current_needs(pid):
 def gen_proposals(pid:str,b:s.Generation,u=Depends(user)):
     access(pid,u,write=True);base=required(pid,'baseline');ns=[n for n in current_needs(pid) if n['data']['status']=='confirmed']
     if not ns:raise ValueError('请先确认至少一条需求及实现拆解')
+    if any(n['data']['baseline_id']!=base['id'] for n in ns):raise ValueError('已确认需求引用旧基准，请基于新基准重新提取和确认需求')
     def run():
         result=s.Proposals(proposals=adapters.proposals(ns,base,project(pid)['constraints'],b.mode)).model_dump()['proposals']
         allowed={n['id'] for n in ns}
@@ -285,7 +286,7 @@ def select(pid:str,rid:str,u=Depends(user)):
     if r['data']['baseline_id']!=required(pid,'baseline')['id']:raise ValueError('方案基于旧 premier，请重新生成')
     reviews=[r for r in db.rows(pid,'review') if r['data']['target_id']==rid]
     if not reviews:raise ValueError('请先提交至少一条评审意见')
-    if reviews[-1]['data']['conclusion']=='否决':raise ValueError('该方案最新评审为否决')
+    if any(r['data']['conclusion']=='否决' for r in {r['data']['discipline']:r for r in reviews}.values()):raise ValueError('该方案仍有专业评审为否决，请先解决对应评审')
     return db.add(pid,'selection',{'proposal_id':rid,'status':'selected_draft','review_ids':[r['id'] for r in reviews]},u['name'])
 
 def prd_text(pid,t):
@@ -339,6 +340,13 @@ def export_docx(pid:str,rid:str,u=Depends(user)):
         if line.startswith('#'):doc.add_heading(line.lstrip('# '),level=min(3,len(line)-len(line.lstrip('#'))))
         else:doc.add_paragraph(line)
     doc.save(p);return FileResponse(p,filename='PRD.docx')
+@app.get('/api/projects/{pid}/prd/{rid}/diff')
+def prd_diff(pid:str,rid:str,u=Depends(user)):
+    access(pid,u);candidate=db.record(rid,pid)
+    if candidate['kind'] not in ('prd','prd_candidate'):raise ValueError('无效文档')
+    current=db.latest(pid,'prd')
+    before=current['data']['content'] if current else ''
+    return {'base_id':current['id'] if current else '', 'diff':'\n'.join(difflib.unified_diff(before.splitlines(),candidate['data']['content'].splitlines(),fromfile='当前保存版本',tofile='候选版本',lineterm=''))}
 @app.post('/api/projects/{pid}/prd/import')
 async def import_prd(pid:str,file:UploadFile=File(...),u=Depends(user)):
     access(pid,u,roles=['owner','product']);blob=await file.read(5_000_001)
@@ -426,7 +434,13 @@ def download(fid:str,inline:bool=False,u=Depends(user)):
     with db.connect() as c:r=c.execute('SELECT * FROM files WHERE id=?',(fid,)).fetchone()
     if not r:raise HTTPException(404,'文件不存在')
     access(r['project_id'],u)
-    return FileResponse(r['path'],media_type=r['mime'],filename=r['name'],content_disposition_type='inline' if inline and r['mime'] in ('image/svg+xml','application/pdf','text/plain','application/json') else 'attachment',headers={'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"})
+    stored=Path(r['path'])
+    if not stored.is_absolute():stored=db.ROOT/stored
+    elif not stored.exists():
+        # Legacy records used host absolute paths; preserve downloads after mounting data in Docker.
+        stored=db.FILES/stored.parent.name/stored.name
+    if not stored.is_file():raise HTTPException(404,'文件不存在')
+    return FileResponse(stored,media_type=r['mime'],filename=r['name'],content_disposition_type='inline' if inline and r['mime'] in ('image/svg+xml','application/pdf','text/plain','application/json') else 'attachment',headers={'Content-Security-Policy':"sandbox; default-src 'none'; style-src 'unsafe-inline'"})
 @app.get('/api/jobs/{jid}')
 def job(jid:str,u=Depends(user)):
     with db.connect() as c:r=c.execute('SELECT * FROM jobs WHERE id=?',(jid,)).fetchone()

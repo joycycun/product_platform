@@ -1,0 +1,23 @@
+services:
+  platform:
+    # CadQuery 2.6.1 / OCP 7.8 provides Linux x86_64 wheels.
+    platform: linux/amd64
+    build: .
+    ports:
+      - "127.0.0.1:${PLATFORM_PORT:-8000}:8000"
+    environment:
+      BOOTSTRAP_USER: ${BOOTSTRAP_USER:-admin}
+      BOOTSTRAP_PASSWORD: ${BOOTSTRAP_PASSWORD:?请先在 .env 配置 BOOTSTRAP_PASSWORD}
+      SALES_TOKEN: ${SALES_TOKEN:-}
+      SALES_SOURCE_SYSTEM: ${SALES_SOURCE_SYSTEM:-company-sales}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+      MODEL_NAME: ${MODEL_NAME:-}
+      ALLOW_MODEL_PROJECT_DATA: ${ALLOW_MODEL_PROJECT_DATA:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
