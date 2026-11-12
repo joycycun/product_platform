@@ -30,6 +30,8 @@ def init():
         CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,project_id TEXT,source_system TEXT,external_id TEXT,received_at TEXT);
         CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,project_id TEXT,kind TEXT,status TEXT,input TEXT,result TEXT,error TEXT,created_at TEXT,finished_at TEXT);
         CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY,project_id TEXT,record_id TEXT,name TEXT,path TEXT,mime TEXT,created_at TEXT);
+        CREATE TABLE IF NOT EXISTS record_archives(record_id TEXT PRIMARY KEY,project_id TEXT NOT NULL,archived_at TEXT NOT NULL,archived_by TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS translation_cache(project_id TEXT NOT NULL,source_hash TEXT NOT NULL,english TEXT NOT NULL,PRIMARY KEY(project_id,source_hash));
         ''')
         c.executescript('''
         CREATE TABLE IF NOT EXISTS account_settings(user_id TEXT PRIMARY KEY,role TEXT NOT NULL DEFAULT 'member',active INTEGER NOT NULL DEFAULT 1);
@@ -48,8 +50,16 @@ def add(project,kind,data,author='system',c=None):
 
 def rows(project,kind=None):
     with connect() as c:
-        rs=c.execute('SELECT * FROM records WHERE project_id=?'+(' AND kind=?' if kind else '')+' ORDER BY rowid',(project,kind) if kind else (project,)).fetchall()
+        rs=c.execute('SELECT r.* FROM records r LEFT JOIN record_archives a ON a.record_id=r.id WHERE r.project_id=? AND a.record_id IS NULL'+(' AND r.kind=?' if kind else '')+' ORDER BY r.rowid',(project,kind) if kind else (project,)).fetchall()
     return [dict(r)|{'data':json.loads(r['data'])} for r in rs]
+
+def archive(project,rids,actor):
+    with connect() as c:
+        c.execute('BEGIN IMMEDIATE')
+        for rid in rids:
+            row=c.execute('SELECT id FROM records WHERE id=? AND project_id=?',(rid,project)).fetchone()
+            if not row:raise ValueError('对象不存在或不属于当前项目')
+            c.execute('INSERT OR IGNORE INTO record_archives VALUES(?,?,?,?)',(rid,project,now(),actor))
 
 def record(rid,project,kind=None):
     with connect() as c:r=c.execute('SELECT * FROM records WHERE id=? AND project_id=?',(rid,project)).fetchone()

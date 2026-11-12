@@ -8,10 +8,6 @@ RUN npm run build
 FROM python:3.12-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/app/data
 WORKDIR /app
-# OpenCascade / VTK runtime dependencies; no desktop or CAD GUI required.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglu1-mesa libglib2.0-0 libxrender1 libxext6 libsm6 libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/

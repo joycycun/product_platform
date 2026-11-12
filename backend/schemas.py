@@ -48,7 +48,7 @@ class Allocation(Strict):
 class Need(Strict):
     title:str=Field(min_length=2,max_length=300)
     description:str=Field(min_length=2,max_length=4000)
-    feedback_ids:list[str]=Field(min_length=1,max_length=100)
+    feedback_ids:list[str]=Field(default_factory=list,max_length=100)
     allocation:Allocation
     status:Literal['pending','confirmed','rejected']='pending'
 class Feature(Strict):
@@ -92,14 +92,51 @@ class Match(Strict):
         d=datetime.fromisoformat(v.replace('Z','+00:00'))
         if not d.tzinfo:raise ValueError('时间须包含时区')
         return d.isoformat()
-class CADParams(Strict):
-    screen_width:float=Field(default=120,ge=40,le=300)
-    screen_height:float=Field(default=70,ge=30,le=200)
-    speaker_width:float=Field(default=80,ge=30,le=200)
-    height:float=Field(default=140,ge=100,le=300)
-    depth:float=Field(default=55,ge=25,le=150)
-    wall:float=Field(default=3,ge=2,le=6)
-class CADRequest(Strict):
-    parameters:CADParams
+class ProductTone(Strict):
+    baseline_id:str
+    generation_mode:Literal['live','demo']='live'
+    target_users:str=Field(min_length=2,max_length=2000)
+    core_value:str=Field(min_length=2,max_length=2000)
+    positioning:str=Field(min_length=2,max_length=2000)
+    design_principles:str=Field(min_length=2,max_length=2000)
+    differentiation:str=Field(min_length=2,max_length=2000)
+    constraints:str=Field(min_length=2,max_length=4000)
+    out_of_scope:str=Field(min_length=2,max_length=2000)
+    rationale:str=Field(min_length=2,max_length=4000)
     confirmed:bool=False
-    note:str='参数为项目概念值，不来自竞品内部尺寸'
+class PremierFact(Strict):
+    text:str=Field(min_length=2,max_length=2000)
+    quote:str=Field(min_length=2,max_length=2000)
+class PremierAnalysis(Strict):
+    premier_summary:str=Field(min_length=2,max_length=4000)
+    target_users:str=Field(min_length=2,max_length=2000)
+    core_value:str=Field(min_length=2,max_length=2000)
+    positioning:str=Field(min_length=2,max_length=2000)
+    design_principles:str=Field(min_length=2,max_length=2000)
+    differentiation:str=Field(min_length=2,max_length=2000)
+    constraints:str=Field(min_length=2,max_length=4000)
+    out_of_scope:str=Field(min_length=2,max_length=2000)
+    rationale:str=Field(min_length=2,max_length=4000)
+    facts:list[PremierFact]=Field(default_factory=list,max_length=12)
+    unknowns:list[str]=Field(default_factory=list,max_length=20)
+class Knowledge(Strict):
+    title:str=Field(min_length=2,max_length=300)
+    content:str=Field(min_length=2,max_length=60000)
+    source_system:str=Field(min_length=1,max_length=100)
+    external_id:str=Field(min_length=1,max_length=200)
+    source_version:str=Field(min_length=1,max_length=100)
+    locator:str=Field(default='',max_length=2000)
+class FileMetadata(Strict):
+    purpose:Literal['knowledge','design']='knowledge'
+    previous_id:str=''
+    note:str=Field(default='首次上传',min_length=2,max_length=2000)
+    need_ids:list[str]=Field(default_factory=list,max_length=100)
+    proposal_id:str=''
+    hardware_feature_indexes:list[int]=Field(default_factory=list,max_length=100)
+    prd_id:str=''
+    preview_of_id:str=''
+class AssistantRequest(Generation):
+    tool:Literal['question','research','prd','files']='question'
+class AssistantAnswer(Strict):
+    answer:str=Field(min_length=1,max_length=16000)
+    citations:list[str]=Field(default_factory=list,max_length=40)

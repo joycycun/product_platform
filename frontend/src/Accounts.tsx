@@ -20,7 +20,7 @@ export default function Accounts({request}:{request:(path:string,body?:any)=>Pro
  <label>账户角色<select value={role} onChange={e=>setRole(e.target.value)}><option value="sales">销售</option><option value="marketing">市场</option></select></label>
  <label className="check"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/>启用账户</label>
  <fieldset><legend>可访问项目</legend>{projects.length?projects.map(p=><label className="check" key={p.id}><input type="checkbox" checked={selected.includes(p.id)} onChange={e=>setSelected(e.target.checked?[...selected,p.id]:selected.filter(x=>x!==p.id))}/>{p.name}</label>):<p>当前没有项目，可先创建账户，之后再分配。</p>}</fieldset>
- <p>销售、市场可录入反馈、搜索及补充资料；方案批准、PRD 保存和 CAD 修改由产品或研发负责。</p>
+ <p>销售、市场可录入反馈、搜索及补充资料；方案批准、PRD 保存和 工程文件上传与评审由产品或研发负责。</p>
  <button disabled={busy}>{busy?'正在保存…':id?'保存配置':'创建账户'}</button>{id&&<button type="button" disabled={busy} onClick={reset}>取消编辑</button>}
  </form></article><article><h3>已有账户 · {accounts.length}</h3>{accounts.map(a=><div className="account-row" key={a.id}><div><strong>{a.name}</strong><p>{({admin:'管理员',sales:'销售',marketing:'市场',member:'项目成员'} as Record<string,string>)[a.role]||a.role} · {a.active?'启用':'停用'}</p><small>{a.project_ids.length} 个项目</small></div>{['sales','marketing'].includes(a.role)&&<button disabled={busy} onClick={()=>edit(a)}>配置</button>}</div>)}</article></div></>
 }
